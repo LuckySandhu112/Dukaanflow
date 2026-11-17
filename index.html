@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Dukaanflow</title>
+<style>
+:root{--navy:#1c4a35;--green:#2e8456;--skin:#f1d5b8;--bg:#fbf4ec;--card:#fffaf4;--tx:#2a2a22;--mu:#6e5f4e;--warn:#d9822b;--bd:#ecdcc8}
+@media(prefers-color-scheme:dark){:root{--bg:#121c16;--card:#1b2a21;--tx:#f7ebdc;--mu:#c4b29a;--bd:#33493c}}
+*{box-sizing:border-box}html,body{margin:0;overflow-x:hidden}body{font-family:system-ui,-apple-system,"Segoe UI",sans-serif;background:var(--bg);color:var(--tx)}
+header{background:var(--navy);color:#fff;padding:10px 14px;display:flex;gap:8px;align-items:center;flex-wrap:wrap;position:sticky;top:0;z-index:5}
+header b{font-size:19px}nav{display:flex;gap:6px;flex-wrap:wrap;margin-left:auto}
+nav button{background:none;color:var(--skin);border:1px solid #3f7a58;border-radius:999px;padding:7px 13px;font-size:14px;cursor:pointer}
+nav button.on{background:var(--green);color:#fff;border-color:var(--green)}
+main{max-width:1000px;margin:auto;padding:14px}#ld{position:fixed;top:0;left:0;height:3px;width:100%;background:var(--warn);z-index:9;animation:l 1s infinite}@keyframes l{from{transform:scaleX(0)}to{transform:scaleX(1)}}
+.hero{background:linear-gradient(135deg,var(--navy),var(--green));color:#fff;border-radius:18px;padding:26px 20px}.hero h1{margin:0 0 6px}
+.grid{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));margin:12px 0}
+.card{background:var(--card);border:1px solid var(--bd);border-radius:14px;padding:14px;margin-bottom:12px;overflow-x:auto}.grid .card{margin:0}.card h3{margin:0 0 8px}
+.mu{color:var(--mu);font-size:14px}.stat{font-size:26px;font-weight:700}
+.btn{background:var(--green);color:#fff;border:0;border-radius:10px;padding:11px 16px;font-size:15px;font-weight:600;cursor:pointer}.btn.s{padding:6px 11px;font-size:13px}
+.btn.o{background:var(--warn)}.btn.w{background:var(--skin);color:var(--navy)}
+input,select,textarea{width:100%;padding:10px;border:1px solid var(--bd);border-radius:9px;font-size:16px;background:var(--card);color:var(--tx);font-family:inherit}
+label{font-size:13px;color:var(--mu);display:block;margin:8px 0 3px}.row{display:flex;gap:8px;flex-wrap:wrap;align-items:end}.row>*{flex:1;min-width:110px}
+table{width:100%;border-collapse:collapse;font-size:14px}td,th{padding:7px 5px;border-bottom:1px solid var(--bd);text-align:left}
+.tag{display:inline-block;padding:2px 9px;border-radius:999px;font-size:12px;font-weight:600;background:#f5e3cf;color:#7a4a22}
+.Pending,.Assigned{background:#fbe5c8;color:#8a4a12}.Accepted,.Shortlisted{background:#dcebf7;color:#1d4e7a}.InProgress{background:#cfe3f7;color:#1d4e7a}
+.Completed{background:#d3efdc;color:#1c6b3a}.Verified{background:#1c4a35;color:#fff}.Rejected{background:#f9d8d6;color:#9b1c1c}
+.mic{width:90px;height:90px;border-radius:50%;background:var(--green);color:#fff;border:0;font-size:36px;cursor:pointer}.mic.rec{background:#c0392b}
+.bar{height:7px;background:var(--bd);border-radius:9px;overflow:hidden}.bar i{display:block;height:100%;background:var(--green)}
+.toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--navy);color:#fff;padding:10px 16px;border-radius:12px;z-index:9;max-width:90vw}.toast.e{background:#9b1c1c}
+.auth{max-width:420px;margin:30px auto}.badge{background:var(--warn);color:#fff;border-radius:99px;padding:0 6px;font-size:12px;margin-left:3px}
+.hide{display:none}a{color:var(--green);cursor:pointer}:focus-visible{outline:3px solid var(--warn)}
+/* Community: profile pictures, online dot, member cards */
+.av{width:48px;height:48px;border-radius:50%;object-fit:cover;background:var(--skin);color:var(--navy);display:inline-flex;align-items:center;justify-content:center;font-weight:700;flex:none}
+.av.m{width:34px;height:34px;font-size:12px}.av.l{width:96px;height:96px;font-size:32px}
+.dot{display:inline-block;width:9px;height:9px;border-radius:50%;background:#9a9a9a;margin-right:5px}.dot.on{background:#2fb35a;box-shadow:0 0 0 3px rgba(47,179,90,.25)}
+.ucard{display:flex;gap:12px;align-items:flex-start}.ucard a{font-weight:700;font-size:16px}.ucard>div{min-width:0;word-break:break-word}
+</style></head><body>
+<div id="ld" class="hide"></div><header><b>🌿 Dukaanflow</b><nav id="nav"></nav></header><main id="app"></main>
+<script>
+const $=id=>document.getElementById(id),esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+let U=null,tab='home',unread=0,pend=null;
+const BASE=location.protocol==='file:'||location.port==='5500'?'http://localhost:3000':'';
+async function api(p,m='GET',b){let r;try{r=await fetch(BASE+'/api'+p,{method:m,headers:{'Content-Type':'application/json',Authorization:'Bearer '+(localStorage.tk||'')},body:b?JSON.stringify(b):undefined})}catch(e){throw Error('Cannot reach server. Run “npm start” and open http://localhost:3000')}
+ let d;try{d=await r.json()}catch(e){throw Error('Server not found. Run “npm start” and open http://localhost:3000')}
+ if(!r.ok){if(r.status===401&&U){logout()}throw Error(d.error||'Something went wrong')}return d}
+function toast(m,e){const d=document.createElement('div');d.className='toast'+(e?' e':'');d.textContent=m;document.body.appendChild(d);setTimeout(()=>d.remove(),2600)}
+async function act(f,ok){$('ld').classList.remove('hide');try{const r=await f();if(ok)toast(ok);return r}catch(e){toast(e.message,1)}finally{$('ld').classList.add('hide')}}
+const v=id=>$(id).value,st=s=>`<span class="tag ${s.replace(' ','')}">${s}</span>`;
+const TABS={owner:[['home','Home'],['tasks','Tasks'],['hire','Hire'],['shop','Shop'],['members','Community'],['alerts','Alerts']],worker:[['home','Home'],['tasks','Tasks'],['me','Profile'],['members','Community'],['alerts','Alerts']],admin:[['admin','Users'],['members','Community']]};
+// ---- auth
+function authView(signup){$('nav').innerHTML='';$('app').innerHTML=`<div class="card auth"><h3>${signup?'Create account':'Welcome back'}</h3>`+(signup?`
+<label for="n">Name</label><input id="n" autocomplete="name"><label for="p">Mobile number</label><input id="p" inputmode="numeric" maxlength="10" autocomplete="tel">
+<label for="un">Username <span class="mu">(optional)</span></label><input id="un" maxlength="20" autocapitalize="none" autocomplete="off" placeholder="made from your name if left blank">
+<label for="em">Email <span class="mu">(optional)</span></label><input id="em" type="email" maxlength="100" autocomplete="email">
+<label for="r">I am a</label><select id="r"><option value="owner">Shop Owner</option><option value="worker">Worker</option></select>
+<label for="pw">Create password</label><input id="pw" type="password" autocomplete="new-password"><label><input type="checkbox" style="width:auto" onchange="$('pw').type=this.checked?'text':'password'"> Show password</label><br><button class="btn" style="width:100%" onclick="signup()">Create account</button>
+<p class="mu">Have an account? <a onclick="authView(0)">Log in</a></p>`:`
+<label for="p">Mobile number</label><input id="p" inputmode="numeric" maxlength="10" autocomplete="tel"><label for="pw">Password</label><input id="pw" type="password" autocomplete="current-password" onkeydown="if(event.key=='Enter')login()"><label><input type="checkbox" style="width:auto" onchange="$('pw').type=this.checked?'text':'password'"> Show password</label><br>
+<button class="btn" style="width:100%" onclick="login()">Log in</button><p class="mu">New here? <a onclick="authView(1)">Sign up</a></p>`)+'</div>'}
+async function signup(){const d=await act(()=>api('/auth/signup','POST',{name:v('n'),phone:v('p'),role:v('r'),password:v('pw'),username:v('un'),email:v('em')}));if(d)start(d)}
+async function login(){const d=await act(()=>api('/auth/login','POST',{phone:v('p'),password:v('pw')}));if(d)start(d)}
+function start(d){localStorage.tk=d.token;U=d.user;tab=TABS[U.role][0][0];beat();render()}
+function logout(){const t=localStorage.tk;clearInterval(HB);if(t)fetch(BASE+'/api/auth/logout',{method:'POST',headers:{Authorization:'Bearer '+t}}).catch(()=>{}); // tells the server we are offline
+ localStorage.removeItem('tk');U=null;authView(0)}
+async function render(){$('nav').innerHTML=TABS[U.role].map(t=>`<button class="${tab==t[0]||(t[0]=='members'&&(tab=='profile'||tab=='myprofile'))?'on':''}" onclick="tab='${t[0]}';render()">${t[1]}${t[0]=='alerts'&&unread?`<span class="badge">${unread}</span>`:''}</button>`).join('')+'<button onclick="logout()">Logout</button>';
+ $('app').innerHTML='<p class="mu">Loading…</p>';const h=await act(()=>V[tab]());if(h!==undefined)$('app').innerHTML=h;if(tab=='shop')loadShop();if(tab=='members')loadUsers(1);if(tab=='admin')drawAdmin()}
+const rf=async(f,ok)=>{const r=await act(f,ok);if(r!==undefined)render()};
+// ---- views
+const V={
+async home(){const d=await api('/shop/dashboard'),n=await api('/notifications');unread=n.filter(x=>!x.read).length;
+ const c=(l,x)=>`<div class="card"><div class="mu">${l}</div><div class="stat">${x}</div></div>`;
+ return `<div class="hero"><h1>Hi, ${esc(U.name.split(' ')[0])}</h1><p>${U.role=='owner'?'Your shop at a glance':'Your work at a glance'}</p></div><div class="grid">`+
+ (d.role=='owner'?c('Workers',d.workers)+c('Active tasks',d.active)+c('Pending',d.pending)+c('Completed',d.done)+c('Sales today','₹'+d.sales)+c('Udhaar due','₹'+d.udhaar)+c('Low stock',d.low)
+ :c('Active',d.active)+c('To accept',d.pending)+c('Completed',d.done)+c('Earned','₹'+d.earned))+`</div><div class="card"><h3>Recent</h3>${d.recent.length?d.recent.map(x=>`<div class="mu">${esc(x.text)} · ${new Date(x.createdAt).toLocaleString()}</div>`).join(''):'<p class="mu">No activity yet.</p>'}</div>`},
+async tasks(){const t=await api('/tasks'),own=U.role=='owner';let ws=[];if(own){ws=await api('/workers');window.WK=ws}
+ const btn=(i,s,l,c='')=>`<button class="btn s ${c}" onclick="ts('${i}','${s}')">${l}</button> `;
+ const act=x=>own?(x.status=='Completed'?btn(x._id,'Verified','Verify'):['Verified','Rejected'].includes(x.status)?'':btn(x._id,'Rejected','Cancel','o')):
+  ({Assigned:btn(x._id,'Accepted','Accept')+btn(x._id,'Rejected','Reject','o'),Accepted:btn(x._id,'In Progress','Start'),'In Progress':btn(x._id,'Completed','Mark completed')}[x.status]||'');
+ return (own?`<div class="card"><h3>New task</h3><div class="row"><div><label>Title</label><input id="tt"></div><div><label>Assign to</label><select id="tw" onchange="const w=(window.WK||[]).find(x=>x.id==this.value);if(w)$('tp').value=w.wage"><option value="">Unassigned</option>${ws.map(w=>`<option value="${w.id}">${esc(w.name)} – ${esc(w.skill)} (₹${w.wage}/day)</option>`).join('')}</select></div>
+ <div><label>Pay ₹</label><input id="tp" type="number" value="500"></div><div><label>Deadline</label><input id="td" type="date"></div></div><label>Details</label><input id="tx"><br><button class="btn" onclick="addTask()">Create task</button></div>`:'')+
+ `<div class="card"><h3>Tasks</h3>${t.length?'<table>'+t.map(x=>`<tr><td><b>${esc(x.title)}</b><div class="mu">${esc(x.desc)}${x.deadline?' · due '+x.deadline.slice(0,10):''}${x.doneAt?' · done '+new Date(x.doneAt).toLocaleString():''}</div></td><td>${own?esc(x.worker?.name||'—'):esc(x.owner?.name)}<div class="mu">₹${x.pay}</div></td><td>${st(x.status)}</td><td>${act(x)}</td></tr>`).join('')+'</table>':'<p class="mu">No tasks yet.</p>'}</div>`},
+async hire(){const iv=await api('/invites');return `<div class="card"><h3>Find workers</h3><div class="row"><div><label>Skill</label><input id="fs"></div><div><label>Within km</label><input id="fk" type="number"></div><div><label>Max wage ₹</label><input id="fw" type="number"></div><div><label>Min years</label><input id="fe" type="number"></div>
+ <button class="btn" onclick="find()">Search</button></div></div><div id="res"></div><div class="card"><h3>Applications</h3>${iv.length?'<table>'+iv.map(i=>`<tr><td>${esc(i.worker?.name)}</td><td>${esc(i.job)}</td><td>${st(i.status)}</td><td>${i.status=='Pending'||i.status=='Accepted'?`<button class="btn s" onclick="inv('${i._id}','Shortlisted')">Shortlist</button> <button class="btn s o" onclick="inv('${i._id}','Rejected')">Reject</button>`:''}</td></tr>`).join('')+'</table>':'<p class="mu">None yet.</p>'}</div>`},
+async me(){const iv=await api('/invites');U=await api('/auth/me');return `<div class="card"><h3>My profile ${U.verified?st('Verified'):st('Pending')}</h3><div class="row"><div><label>Skill</label><input id="ps" value="${esc(U.skill)}"></div><div><label>Distance km</label><input id="pk" type="number" value="${U.km}"></div><div><label>Wage ₹/day</label><input id="pw2" type="number" value="${U.wage}"></div><div><label>Wage ₹/hour</label><input id="ph" type="number" value="${U.hourly}"></div><div><label>Years</label><input id="pe" type="number" value="${U.exp}"></div>
+ <div><label>City / area</label><input id="pc" value="${esc(U.city)}"></div><div><label>Languages (comma separated)</label><input id="pl" value="${esc((U.langs||[]).join(', '))}"></div>
+ <div><label>Available</label><select id="pa"><option value="1" ${U.avail?'selected':''}>Yes</option><option value="0" ${U.avail?'':'selected'}>Busy</option></select></div></div><label>About me</label><textarea id="pb" rows="2" maxlength="200">${esc(U.bio)}</textarea>
+ <p class="mu">⭐ ${U.jobs?U.rating.toFixed(1):'No rating yet'} · ${U.jobs} job${U.jobs==1?'':'s'} completed</p><br><button class="btn" onclick="saveMe()">Save</button></div>
+ <div class="card"><h3>Invitations</h3>${iv.length?'<table>'+iv.map(i=>`<tr><td>${esc(i.owner?.name)}</td><td>${esc(i.job)}</td><td>${st(i.status)}</td><td>${i.status=='Pending'||i.status=='Shortlisted'?`<button class="btn s" onclick="inv('${i._id}','Accepted')">Accept</button> <button class="btn s o" onclick="inv('${i._id}','Rejected')">Decline</button>`:''}</td></tr>`).join('')+'</table>':'<p class="mu">None yet.</p>'}</div>`},
+async shop(){return `<div class="card" style="text-align:center"><button id="mic" class="mic" onclick="listen()" aria-label="Speak">🎙️</button><p class="mu">Tap and speak, or type</p>
+ <div class="row"><input id="cmd" placeholder="Ramesh ne 40 rupaye ki chai udhaar li" onkeydown="if(event.key=='Enter')run(this.value)"><button class="btn" style="flex:0" onclick="run(v('cmd'))">Send</button></div><div id="conf"></div></div>
+ <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(280px,1fr))"><div class="card"><h3>Udhaar</h3><div id="ud"></div></div><div class="card"><h3>Stock</h3><div id="stk"></div>
+ <div class="row" style="margin-top:8px"><input id="pn" placeholder="Product"><input id="pq" type="number" placeholder="Qty"><input id="pm" type="number" placeholder="Min"><button class="btn s" onclick="addP()">Add</button></div></div>
+ <div class="card"><h3>Orders</h3><div id="od"></div></div><div class="card"><h3>History</h3><div id="hs"></div></div></div>`},
+async alerts(){const n=await api('/notifications');unread=0;n.filter(x=>!x.read).forEach(x=>api('/notifications/'+x._id+'/read','PATCH'));
+ return `<div class="card"><h3>Alerts</h3>${n.length?n.map(x=>`<div style="padding:6px 0;border-bottom:1px solid var(--bd)">${x.read?'':'🟢 '}${esc(x.text)}<div class="mu">${new Date(x.createdAt).toLocaleString()}</div></div>`).join(''):'<p class="mu">Nothing new.</p>'}</div>`},
+async admin(){AD=await api('/admin/users');
+ return `<div id="ast"></div><div class="card"><h3 id="aht">Users</h3><div class="row"><div><label for="aq">Search users</label><input id="aq" placeholder="Name, username, email or mobile" oninput="drawAdmin()"></div>
+ <div style="flex:0 0 170px"><label for="af">Show</label><select id="af" onchange="drawAdmin()"><option value="">All users</option><option value="active">Active</option><option value="suspended">Suspended</option><option value="online">Online now</option></select></div></div><div id="adt" style="margin-top:8px"></div></div>`},
+async members(){return `<div class="card"><h3>Community</h3><div class="row"><div style="flex:3 1 220px"><label for="uq">Search by name or username</label><input id="uq" placeholder="e.g. ramesh or @ramesh" oninput="clearTimeout(UT);UT=setTimeout(()=>loadUsers(1),300)"></div>
+ <div><label for="ur">Type</label><select id="ur" onchange="loadUsers(1)"><option value="">Everyone</option><option value="owner">Shop owners</option><option value="worker">Workers</option></select></div>
+ <div><label for="us">Status</label><select id="us" onchange="loadUsers(1)"><option value="">All</option><option value="online">Online now</option></select></div>
+ <button class="btn w" style="flex:0 0 auto" onclick="openMine()">My profile</button></div><p class="mu" id="ucount" style="margin-bottom:0">Loading…</p></div><div id="ulist"></div>`},
+async profile(){let p;try{p=await api('/users/'+PID)}catch(e){return `<div class="card"><p>${esc(e.message)}</p><button class="btn" onclick="goTab('members')">Back to Community</button></div>`}
+ const w=p.worker,row=(k,x)=>x?`<tr><td class="mu" style="width:38%">${k}</td><td>${esc(x)}</td></tr>`:'';
+ return `<div class="card"><button class="btn s w" onclick="goTab('members')">← Community</button>
+ <div class="ucard" style="gap:16px;margin-top:14px">${av(p,'l')}<div><h2 style="margin:0">${esc(p.name)}</h2><div class="mu">@${esc(p.username)}</div>
+ <div style="margin:6px 0"><span class="tag">${RL[p.role]||p.role}</span>${p.verified?' '+st('Verified'):''}${p.active===false?' <span class="tag Rejected">Suspended</span>':''}</div><div class="mu">${dot(p)}</div></div></div>
+ <p>${p.bio?esc(p.bio):'<span class="mu">No bio yet.</span>'}</p><table>${row('City / area',p.city)}${row('Email',p.email)}${row('Member since',fd(p.joined))}
+ ${w?row('Skill',p.skill)+row('Experience',w.exp+' year'+(w.exp==1?'':'s'))+row('Rating',w.jobs?'⭐ '+w.rating.toFixed(1)+' ('+w.jobs+' jobs)':'No rating yet')+row('Languages',(w.langs||[]).join(', '))+row('Availability',w.avail?'Available':'Busy'):''}</table>
+ ${p.id==U.id?'<br><button class="btn" onclick="openMine()">Edit my profile</button>':''}</div>`},
+async myprofile(){AV=undefined;const m=await api('/auth/me');U={...U,...m};
+ return `<div class="card"><h3>Edit my profile</h3><div class="ucard" style="align-items:center;gap:16px"><div id="pfa">${av(m,'l')}</div><div>
+ <label for="pff" style="margin-top:0">Profile picture</label><input id="pff" type="file" accept="image/*" onchange="pickAvatar(this)">
+ <div class="mu" style="margin:4px 0 6px">Any photo works - it is cropped square and shrunk automatically.</div><button class="btn s o" onclick="AV='';$('pfa').innerHTML=av({name:U.name},'l')">Remove picture</button></div></div>
+ <div class="row"><div><label for="pfn">Full name</label><input id="pfn" maxlength="100" value="${esc(m.name)}"></div><div><label for="pfu">Username</label><input id="pfu" maxlength="20" autocapitalize="none" value="${esc(m.username)}"></div></div>
+ <div class="row"><div><label for="pfe">Email</label><input id="pfe" type="email" maxlength="100" value="${esc(m.email)}"></div><div><label for="pfc">City / area</label><input id="pfc" maxlength="40" value="${esc(m.city)}"></div></div>
+ <label><input id="pfs" type="checkbox" style="width:auto" ${m.showEmail?'checked':''}> Show my email to other members</label>
+ <label for="pfb">About me</label><textarea id="pfb" rows="2" maxlength="200">${esc(m.bio)}</textarea><br><div class="row"><button class="btn" onclick="saveProfile()">Save</button><button class="btn w" onclick="openProfile(U.id)">Cancel</button></div></div>`}};
+// ---- actions
+const ts=(i,s)=>{let rating;if(s=='Verified'){const r=prompt('Rate this worker (1-5)','5');if(r===null)return;rating=+r}rf(()=>api(`/tasks/${i}/status`,'PATCH',{status:s,rating}),'Updated to '+s)};
+const addTask=()=>rf(()=>api('/tasks','POST',{title:v('tt'),worker:v('tw'),pay:v('tp'),deadline:v('td'),desc:v('tx')}),'Task created');
+const inv=(i,s)=>rf(()=>api('/invites/'+i,'PATCH',{status:s}),s);
+const adm=async(i,b)=>{const r=await act(()=>api('/admin/users/'+i,'PATCH',b),'Saved');if(r){const k=AD.findIndex(x=>x.id==i);if(k>=0)AD[k]=r;drawAdmin()}};
+const saveMe=()=>rf(()=>api('/workers/me','PUT',{skill:v('ps'),km:v('pk'),wage:v('pw2'),hourly:v('ph'),exp:v('pe'),city:v('pc'),langs:v('pl'),bio:v('pb'),avail:v('pa')=='1'}),'Profile saved');
+async function find(){const q=new URLSearchParams({skill:v('fs'),km:v('fk'),wage:v('fw'),exp:v('fe')});const w=await act(()=>api('/workers?'+q));if(!w)return;
+ $('res').innerHTML=`<div class="card"><h3>Matches</h3>${w.length?w.map(x=>`<div style="padding:10px 0;border-bottom:1px solid var(--bd)"><b>${esc(x.name)}</b> ${st(x.skill)} <span class="tag Completed">${x.match}% match</span>${x.verified?' ✔ Verified':''}${x.avail?'':' <span class="tag Pending">Busy</span>'}<div class="bar"><i style="width:${x.match}%"></i></div>
+ <div style="margin:6px 0"><b>₹${x.wage}/day</b> · ₹${x.hourly}/hour · ${x.exp} yr exp · ${x.km} km away${x.city?' · '+esc(x.city):''}</div>
+ <div class="mu">⭐ ${x.jobs?x.rating.toFixed(1):'New'} (${x.jobs} jobs)${x.langs&&x.langs.length?' · '+esc(x.langs.join(', ')):''} · 📞 ${esc(x.phone)}</div>${x.bio?`<div class="mu">${esc(x.bio)}</div>`:''}<div class="mu">${esc(x.why)}</div><br><button class="btn s" onclick="invite('${x.id}','${esc(x.skill)}')">Invite</button></div>`).join(''):'<p class="mu">No workers found.</p>'}</div>`}
+const invite=(w,j)=>rf(()=>api('/invites','POST',{worker:w,job:j}),'Invitation sent');
+// ---- community helpers
+let PID=null,AV,AD=[],HB,UT,UPG=1,USEQ=0;
+const RL={owner:'Shop Owner',worker:'Worker',admin:'Admin'},fd=d=>new Date(d).toLocaleDateString(undefined,{day:'numeric',month:'short',year:'numeric'});
+const ago=d=>{const m=Math.max(0,Math.round((Date.now()-new Date(d))/6e4)),h=Math.round(m/60),dy=Math.round(m/1440);return m<1?'just now':m<60?m+' min ago':m<1440?h+' hr ago':dy+' day'+(dy==1?'':'s')+' ago'};
+// profile picture, or the person's initials if they have none
+const av=(u,c='')=>u.avatarUrl?`<img class="av ${c}" src="${esc(BASE+u.avatarUrl)}" alt="">`:`<span class="av ${c}" aria-hidden="true">${esc((u.name||'?').split(/\s+/).filter(Boolean).slice(0,2).map(w=>w[0]).join('').toUpperCase())}</span>`;
+const dot=u=>`<span class="dot ${u.online?'on':''}"></span>${u.online?'Online':'Offline'+(u.lastSeen?' · seen '+ago(u.lastSeen):'')}`;
+const goTab=t=>{tab=t;render()},openProfile=id=>{PID=id;tab='profile';render()},openMine=()=>{tab='myprofile';render()};
+// "I'm still here" signal every 30s so other people see us as online
+function beat(){clearInterval(HB);if(!U)return;const ping=()=>{if(U)api('/presence','POST').catch(()=>{})};ping();HB=setInterval(ping,30000)}
+document.addEventListener('visibilitychange',()=>{if(!document.hidden&&U)beat()});
+// refresh the visible list every 30s so online/offline changes show up without reloading
+setInterval(async()=>{if(!U||document.hidden)return;if(tab=='members')loadUsers(UPG,1);if(tab=='admin'){try{AD=await api('/admin/users');drawAdmin()}catch(e){}}},30000);
+async function loadUsers(pg,quiet){UPG=pg||1;const n=++USEQ,q=new URLSearchParams({q:v('uq'),role:v('ur'),status:v('us'),page:UPG,limit:12});let d;
+ try{d=await api('/users?'+q)}catch(e){if(!quiet)toast(e.message,1);return}
+ if(n!==USEQ||!$('ulist'))return; // ignore old answers if a newer search already ran
+ $('ucount').textContent=`${d.total} member${d.total==1?'':'s'} found · ${d.onlineNow} online now`;
+ $('ulist').innerHTML=d.users.length?'<div class="grid" style="grid-template-columns:repeat(auto-fill,minmax(260px,1fr))">'+d.users.map(u=>`<div class="card ucard">${av(u)}<div><a onclick="openProfile('${u.id}')">${esc(u.name)}</a>${u.id==U.id?' <span class="tag">You</span>':''}
+  <div class="mu">@${esc(u.username)} · ${RL[u.role]||u.role}</div><div class="mu">${dot(u)}</div>${u.city?`<div class="mu">📍 ${esc(u.city)}</div>`:''}${u.email?`<div class="mu">✉ ${esc(u.email)}</div>`:''}<div class="mu">Joined ${fd(u.joined)}</div></div></div>`).join('')+'</div>'
+  +(d.pages>1?`<div class="row" style="justify-content:center;align-items:center;margin-top:6px"><button class="btn s w" style="flex:0" ${d.page<=1?'disabled':''} onclick="loadUsers(${d.page-1})">← Prev</button><span class="mu" style="flex:0;white-space:nowrap">Page ${d.page} of ${d.pages}</span><button class="btn s w" style="flex:0" ${d.page>=d.pages?'disabled':''} onclick="loadUsers(${d.page+1})">Next →</button></div>`:''):'<div class="card"><p class="mu">No members match your search.</p></div>'}
+// shrink the chosen photo to a 160x160 square JPEG in the browser (keeps the database small)
+function pickAvatar(inp){const f=inp.files[0];if(!f)return;if(!f.type.startsWith('image/'))return toast('Please choose an image file',1);
+ const img=new Image(),url=URL.createObjectURL(f);
+ img.onload=()=>{const S=160,c=document.createElement('canvas');c.width=c.height=S;const m=Math.min(img.width,img.height),g=c.getContext('2d');g.fillStyle='#fff';g.fillRect(0,0,S,S);
+  g.drawImage(img,(img.width-m)/2,(img.height-m)/2,m,m,0,0,S,S);AV=c.toDataURL('image/jpeg',.82);URL.revokeObjectURL(url);$('pfa').innerHTML=`<img class="av l" src="${AV}" alt="">`};
+ img.onerror=()=>{URL.revokeObjectURL(url);toast('Could not read that image',1)};img.src=url}
+async function saveProfile(){const b={name:v('pfn'),username:v('pfu'),email:v('pfe'),showEmail:$('pfs').checked,city:v('pfc'),bio:v('pfb')};if(AV!==undefined)b.avatar=AV;
+ const d=await act(()=>api('/users/me','PUT',b),'Profile saved');if(d){U={...U,...d};openProfile(U.id)}}
+// admin: statistics + searchable table (search/filter runs on the list already loaded)
+function drawAdmin(){if(!$('adt'))return;const q=v('aq').trim().toLowerCase().replace(/^@/,''),f=v('af'),on=x=>x.active&&x.online,
+ sc=(l,x)=>`<div class="card"><div class="mu">${l}</div><div class="stat">${x}</div></div>`;
+ $('ast').innerHTML='<div class="grid">'+sc('Total users',AD.length)+sc('Active',AD.filter(x=>x.active).length)+sc('Suspended',AD.filter(x=>!x.active).length)+sc('Online now',AD.filter(on).length)+sc('Shop owners',AD.filter(x=>x.role=='owner').length)+sc('Workers',AD.filter(x=>x.role=='worker').length)+'</div>';
+ const L=AD.filter(x=>(!q||[x.name,x.username,x.email,x.phone].some(t=>String(t||'').toLowerCase().includes(q)))&&(!f||(f=='active'?x.active:f=='suspended'?!x.active:on(x))));
+ $('aht').textContent=`Users (${AD.length})`+(L.length!=AD.length?` · showing ${L.length}`:'');
+ $('adt').innerHTML=L.length?'<table>'+L.map(x=>`<tr><td style="width:44px">${av(x,'m')}</td><td><a onclick="openProfile('${x.id}')">${esc(x.name)}</a><div class="mu">@${esc(x.username)}${x.email?' · '+esc(x.email):''}</div><div class="mu">${esc(x.phone)}${x.role=='worker'?` · ${esc(x.skill)} · ₹${x.wage}/day`:''}</div></td>
+  <td>${RL[x.role]||x.role}<div class="mu">${dot(x)}</div></td><td class="mu">${fd(x.joined)}</td><td>${x.active?'<span class="tag Verified">Active</span>':'<span class="tag Rejected">Suspended</span>'}</td>
+  <td>${x.role=='admin'?'':`<button class="btn s ${x.active?'o':''}" onclick="adm('${x.id}',{active:${!x.active}})">${x.active?'Suspend':'Activate'}</button> ${x.role=='worker'?`<button class="btn s w" onclick="adm('${x.id}',{verified:${!x.verified}})">${x.verified?'Unverify':'Verify'}</button>`:''}`}</td></tr>`).join('')+'</table>':'<p class="mu">No users match.</p>'}
+// shop
+let CU=[];async function loadShop(){const[c,p,o,h]=await Promise.all([api('/customers'),api('/products'),api('/orders'),api('/transactions')]).catch(e=>(toast(e.message,1),[[],[],[],[]]));CU=c;window.PR=p;
+ $('ud').innerHTML=c.length?'<table>'+c.map(x=>`<tr><td>${esc(x.name)}</td><td>₹${x.bal}</td></tr>`).join('')+'</table>':'<p class="mu">No customers yet.</p>';
+ $('stk').innerHTML=p.length?'<table>'+p.map(x=>`<tr><td>${esc(x.name)}</td><td>${x.qty}</td><td>${x.qty<x.min?'<span class="tag Pending">Low</span>':'<span class="tag Completed">OK</span>'}</td><td><button class="btn s w" onclick="setQ('${x._id}',${x.qty})">Edit</button> <button class="btn s o" onclick="delP('${x._id}')">✕</button></td></tr>`).join('')+'</table>':'<p class="mu">No products yet.</p>';
+ $('od').innerHTML=o.length?'<table>'+o.map(x=>`<tr><td>${x.qty} ${esc(x.product)}</td><td>${st(x.status)}</td><td>${x.status=='Pending'?`<button class="btn s" onclick="rcv('${x._id}')">Received</button>`:''}</td></tr>`).join('')+'</table>':'<p class="mu">No orders.</p>';
+ $('hs').innerHTML=h.length?'<table>'+h.slice(0,8).map(x=>`<tr><td>${esc(x.customer?.name||'Sale')}</td><td>${x.type}</td><td>₹${x.amount}</td></tr>`).join('')+'</table>':'<p class="mu">No transactions.</p>'}
+const addP=()=>rf(()=>api('/products','POST',{name:v('pn'),qty:v('pq')||0,min:v('pm')||0}),'Product added');
+const setQ=(i,q)=>{const n=prompt('New quantity',q);if(n!==null)rf(()=>api('/products/'+i,'PUT',{qty:n}),'Stock updated')};
+const delP=i=>{if(confirm('Delete this product?'))rf(()=>api('/products/'+i,'DELETE'),'Deleted')};
+const rcv=i=>rf(()=>api('/orders/'+i,'PATCH',{status:'Received'}),'Order received');
+// voice
+function listen(){const R=window.SpeechRecognition||window.webkitSpeechRecognition;if(!R)return toast('Voice unavailable – type instead',1);
+ try{const r=new R();r.lang='hi-IN';$('mic').classList.add('rec');r.onresult=e=>run(e.results[0][0].transcript);r.onerror=()=>toast('Mic unavailable',1);r.onend=()=>$('mic').classList.remove('rec');r.start()}catch(e){toast('Mic unavailable',1)}}
+const cap=s=>s?s[0].toUpperCase()+s.slice(1):s;
+function parse(t){const l=t.toLowerCase().replace(/[₹,?.!]/g,' '),n=(l.match(/\d+/)||[])[0],amt=n?+n:null,m=l.match(/([a-z]+)(?: ji)?\s+(?:ne|ka|ki)\b/),name=m&&cap(m[1]);
+ if(/wapas|repaid|returned|jama/.test(l))return{intent:'repay',customer:name,amount:amt};
+ if(/kitna.*(udhaar|baaki)|balance|baaki/.test(l))return{intent:'balance',customer:name};
+ if(/udhaar|udhar|credit/.test(l)&&amt){const it=(l.match(/\d+\s*(?:rupaye|rupees|rs)?\s*(?:ki|ka|of)?\s*([a-z ]+?)\s*(?:udhaar|udhar|credit)/)||[])[1];return{intent:'credit',customer:name,amount:amt,note:it||''}}
+ if(/stock|bacha/.test(l))return{intent:'stock',product:(window.PR||[]).find(p=>l.includes(p.name.toLowerCase()))?.name};
+ if(/sale|bikri|becha/.test(l))return amt?{intent:'sale',amount:amt}:{intent:'report'};return{intent:'unknown'}}
+async function run(t){t=(t||'').trim();if(!t)return;const p=parse(t),c=$('conf'),say=m=>{c.innerHTML=`<div class="card" style="margin-top:10px">💬 ${esc(m)}</div>`;try{const u=new SpeechSynthesisUtterance(m);u.lang='hi-IN';speechSynthesis.cancel();speechSynthesis.speak(u)}catch(e){}};
+ if(p.intent=='unknown')return say('Samajh nahi aaya, dobara boliye');
+ if(p.intent=='balance'){const x=CU.find(y=>y.name.toLowerCase()==(p.customer||'').toLowerCase());return say(x?`${x.name} ka ₹${x.bal} udhaar baaki hai.`:'Customer not found.')}
+ if(p.intent=='stock'){const x=(window.PR||[]).find(y=>y.name==p.product);return say(x?`${x.name} ka stock ${x.qty} bacha hai.`:'Product not found.')}
+ if(p.intent=='report'){const d=await act(()=>api('/shop/dashboard'));return d&&say(`Aaj ki total sale ₹${d.sales} hai.`)}
+ if(['credit','repay'].includes(p.intent)&&!p.customer)return say('Which customer?');
+ pend=p;c.innerHTML=`<div class="card" style="margin-top:10px;text-align:left"><b>Confirm?</b><p>${p.intent} · ${esc(p.customer||'')} · ₹${p.amount}${p.note?' · '+esc(p.note):''}</p><div class="row"><button class="btn" onclick="confirmTx()">Confirm</button><button class="btn o" onclick="$('conf').innerHTML='';pend=null">Cancel</button></div></div>`}
+async function confirmTx(){const p=pend;if(!p)return;pend=null;const r=await act(()=>api('/transactions','POST',{type:p.intent,customer:p.customer,amount:p.amount,note:p.note}),'Saved');$('conf').innerHTML='';if(r)loadShop()}
+// boot
+(async()=>{if(localStorage.tk){try{U=await api('/auth/me');tab=TABS[U.role][0][0];beat();return render()}catch(e){}}authView(0)})();
+</script></body></html>
